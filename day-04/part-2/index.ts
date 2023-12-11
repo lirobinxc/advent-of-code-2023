@@ -28,7 +28,8 @@ const winningCardNumsList = data.map((card) => {
 
 const myCardList = data.map((card) => card[1].split(' ').filter((num) => num));
 
-const result: number[] = [];
+const cardCount: number[] = Array(data.length).fill(1);
+const cardPoints: number[] = [];
 
 myCardList.forEach((card, cardIdx) => {
   let winningCount = 0;
@@ -39,11 +40,18 @@ myCardList.forEach((card, cardIdx) => {
     }
   });
 
-  log(winningCount);
-  result.push(getScore(winningCount));
+  cardPoints.push(getScore(winningCount));
+
+  // Inc copies of next cards by winningCount
+  for (let i = 1; i <= winningCount; i++) {
+    const nextCardIdx = cardIdx + i;
+    if (!cardCount[nextCardIdx]) break;
+
+    cardCount[nextCardIdx] += cardCount[cardIdx];
+  }
 });
 
-log(result);
+log(cardCount);
 
-const sum = result.reduce((acc, prev) => acc + prev, 0);
+const sum = cardCount.reduce((acc, prev) => acc + prev, 0);
 log(sum);
