@@ -1,0 +1,19 @@
+{
+  "name": "advent-of-code-2023",
+  "version": "1.0.0",
+  "description": "My solutions for https://adventofcode.com/2023/",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon ./day-04/part-1/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
