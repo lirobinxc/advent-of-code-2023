@@ -1,86 +1,63 @@
 import { log } from 'node:console';
 import fs from 'node:fs';
 
-function getMapData(data: string[], name: string) {
-  const nameIdx = data.findIndex((str) => str.includes(name));
+// PROCESS DATA
+function processInput(file: string) {
+  const data = fs
+    .readFileSync(file, {
+      encoding: 'utf-8',
+    })
+    .split('\n')
+    .map((line) => line.split(' '));
 
-  if (nameIdx < 0) return [];
+  const timeList = data[0]
+    .filter((item) => !isNaN(parseInt(item)))
+    .map((numStr) => parseInt(numStr));
 
-  const result: number[][] = [];
+  const distanceList = data[1]
+    .filter((item) => !isNaN(parseInt(item)))
+    .map((numStr) => parseInt(numStr));
 
-  for (let i = nameIdx + 1; data[i]; i++) {
-    result.push(data[i].split(' ').map((num) => parseInt(num)));
+  const raceResultList: { time: number; distance: number }[] = [];
+
+  for (let i = 0; i < timeList.length; i++) {
+    raceResultList.push({
+      time: timeList[i],
+      distance: distanceList[i],
+    });
   }
 
-  return result;
+  return raceResultList;
 }
 
-const data = fs
-  .readFileSync('./day-05/input.txt', {
-    encoding: 'utf-8',
-  })
-  .split('\n');
+// SOLVE
+function getWaysToWin(timeLimit: number, recordDistance: number) {
+  let counter = 0;
 
-const seedNumList = data[0]
-  .split(': ')[1]
-  .split(' ')
-  .map((num) => parseInt(num));
+  for (let i = 1; i < timeLimit; i++) {
+    const chargedSpeed = i;
+    const timeRemaining = timeLimit - i;
 
-const mapDataList = [
-  getMapData(data, 'seed-to-soil'),
-  getMapData(data, 'soil-to-fertilizer'),
-  getMapData(data, 'fertilizer-to-water'),
-  getMapData(data, 'water-to-light'),
-  getMapData(data, 'light-to-temperature'),
-  getMapData(data, 'temperature-to-humidity'),
-  getMapData(data, 'humidity-to-location'),
-];
+    const distance = chargedSpeed * timeRemaining;
 
-log(mapDataList);
+    if (distance > recordDistance) counter++;
+  }
 
-const mapFormulasList = mapDataList.map((mapData) => {
-  const formulas: {
-    min: number;
-    max: number;
-    getResult: (num: number) => number;
-  }[] = [];
+  return counter;
+}
 
-  mapData.forEach((formula) => {
-    const sourceNum = formula[1];
-    const destination = formula[0];
-    const range = formula[2];
+function main(inputFile: string) {
+  const raceList = processInput(inputFile);
 
-    const data = {
-      min: sourceNum,
-      max: sourceNum + range - 1,
-      getResult(myNum: number) {
-        const diff = myNum - sourceNum;
+  const waysToWinList: number[] = [];
 
-        return destination + diff;
-      },
-    };
+  for (const race of raceList) {
+    const waysToWin = getWaysToWin(race.time, race.distance);
+    waysToWinList.push(waysToWin);
+  }
 
-    formulas.push(data);
-  });
+  const product = waysToWinList.reduce((acc, curr) => acc * curr, 1);
+  log(product);
+}
 
-  return formulas;
-});
-
-// Convert seed nums to location
-const seedLocationList = seedNumList.map((seed) => {
-  let currNum = seed;
-  // log('SEED NUM = ', currNum);
-
-  mapFormulasList.forEach((map) => {
-    const correctFormula = map.find((formula) => {
-      return currNum >= formula.min && currNum <= formula.max;
-    });
-
-    // log(currNum, correctFormula);
-    currNum = correctFormula?.getResult(currNum) || currNum;
-  });
-
-  return currNum;
-});
-
-log(Math.min(...seedLocationList));
+main('./day-06/input.txt');

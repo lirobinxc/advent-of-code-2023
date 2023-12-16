@@ -1,166 +1,48 @@
 import { log } from 'node:console';
 import fs from 'node:fs';
-import { Worker, isMainThread, parentPort } from 'node:worker_threads';
 
-function getMapData(data: string[], name: string) {
-  const nameIdx = data.findIndex((str) => str.includes(name));
+// PROCESS DATA
+function processInput(file: string) {
+  const data = fs
+    .readFileSync(file, {
+      encoding: 'utf-8',
+    })
+    .split('\n')
+    .map((line) => line.split(' '));
 
-  if (nameIdx < 0) return [];
+  const timeStr = data[0].filter((item) => !isNaN(parseInt(item))).join('');
+  const distanceStr = data[1].filter((item) => !isNaN(parseInt(item))).join('');
 
-  const result: number[][] = [];
+  const raceData = {
+    time: parseInt(timeStr),
+    distance: parseInt(distanceStr),
+  };
 
-  for (let i = nameIdx + 1; data[i]; i++) {
-    result.push(data[i].split(' ').map((num) => parseInt(num)));
-  }
-
-  return result;
+  log(raceData);
+  return raceData;
 }
 
-const data = fs
-  .readFileSync('./day-05/input.txt', {
-    encoding: 'utf-8',
-  })
-  .split('\n');
+// SOLVE
+function getWaysToWin(timeLimit: number, recordDistance: number) {
+  let counter = 0;
 
-const seedNumData = data[0]
-  .split(': ')[1]
-  .split(' ')
-  .map((num) => parseInt(num));
+  for (let i = 1; i < timeLimit; i++) {
+    const chargedSpeed = i;
+    const timeRemaining = timeLimit - i;
 
-function genSeedRanges() {
-  const ranges: { min: number; max: number }[] = [];
+    const distance = chargedSpeed * timeRemaining;
 
-  for (let i = 0; i < seedNumData.length; i += 2) {
-    const currNum = seedNumData[i];
-    const range = seedNumData[i + 1];
-
-    const data = {
-      min: currNum,
-      max: currNum + range - 1,
-    };
-
-    ranges.push(data);
+    if (distance > recordDistance) counter++;
   }
 
-  return ranges;
+  return counter;
 }
 
-const seedRanges = genSeedRanges();
-log(seedRanges);
+function main(inputFile: string) {
+  const raceData = processInput(inputFile);
 
-const mapDataList = [
-  getMapData(data, 'seed-to-soil'),
-  getMapData(data, 'soil-to-fertilizer'),
-  getMapData(data, 'fertilizer-to-water'),
-  getMapData(data, 'water-to-light'),
-  getMapData(data, 'light-to-temperature'),
-  getMapData(data, 'temperature-to-humidity'),
-  getMapData(data, 'humidity-to-location'),
-];
-
-// log(mapDataList);
-
-const reversedMapFormulasList = mapDataList
-  .map((mapData) => {
-    const formulas: {
-      min: number;
-      max: number;
-      getResult: (num: number) => number;
-    }[] = [];
-
-    mapData.forEach((formula) => {
-      const sourceNum = formula[0];
-      const destination = formula[1];
-      const range = formula[2];
-
-      const data = {
-        min: sourceNum,
-        max: sourceNum + range - 1,
-        getResult(myNum: number) {
-          const diff = myNum - sourceNum;
-
-          return destination + diff;
-        },
-      };
-
-      formulas.push(data);
-    });
-
-    return formulas;
-  })
-  .reverse();
-
-function calcSeedNumFromLocation(location: number) {
-  let seedNum = location;
-
-  reversedMapFormulasList.forEach((map) => {
-    const correctFormula = map.find((formula) => {
-      return seedNum >= formula.min && seedNum <= formula.max;
-    });
-
-    seedNum = correctFormula?.getResult(seedNum) || seedNum;
-  });
-
-  return seedNum;
+  const waysToWin = getWaysToWin(raceData.time, raceData.distance);
+  log(waysToWin);
 }
 
-function main() {
-  console.time('runtime');
-
-  let maxSeedLocation = 500_000_000_000;
-
-  function randomSeedLocation() {
-    return Math.floor(Math.random() * maxSeedLocation);
-  }
-
-  let location = randomSeedLocation();
-
-  let isRandomSearch = true;
-  while (location <= maxSeedLocation) {
-    const seedNum = calcSeedNumFromLocation(location);
-
-    const seedIdx = seedRanges.findIndex(
-      (range) => seedNum >= range.min && seedNum <= range.max
-    );
-
-    if (seedIdx >= 0) {
-      if (location > 5_000_000) {
-        log('RANDOM SUCCESS, setting new limit');
-        maxSeedLocation = location;
-        log(location);
-      } else {
-        log('BEGIN SERIAL SEARCH');
-        maxSeedLocation = location;
-        isRandomSearch = false;
-      }
-    }
-
-    if (isRandomSearch) {
-      location = randomSeedLocation();
-    } else {
-      location = 0;
-      while (location < maxSeedLocation) {
-        log(location);
-
-        const seedNum = calcSeedNumFromLocation(location);
-
-        const seedIdx = seedRanges.findIndex(
-          (range) => seedNum >= range.min && seedNum <= range.max
-        );
-
-        if (seedIdx >= 0) {
-          break;
-        }
-
-        location++;
-      }
-
-      break;
-    }
-  }
-
-  log('ANSWER', location);
-  console.timeEnd('runtime');
-}
-
-main();
+main('./day-06/input.txt');
