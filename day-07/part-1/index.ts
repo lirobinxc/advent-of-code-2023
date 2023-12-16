@@ -1,63 +1,128 @@
 import { log } from 'node:console';
 import fs from 'node:fs';
 
-// PROCESS DATA
-function processInput(file: string) {
+function processData(file: string) {
   const data = fs
     .readFileSync(file, {
       encoding: 'utf-8',
     })
     .split('\n')
-    .map((line) => line.split(' '));
-
-  const timeList = data[0]
-    .filter((item) => !isNaN(parseInt(item)))
-    .map((numStr) => parseInt(numStr));
-
-  const distanceList = data[1]
-    .filter((item) => !isNaN(parseInt(item)))
-    .map((numStr) => parseInt(numStr));
-
-  const raceResultList: { time: number; distance: number }[] = [];
-
-  for (let i = 0; i < timeList.length; i++) {
-    raceResultList.push({
-      time: timeList[i],
-      distance: distanceList[i],
+    .map((play) => {
+      const [cards, bet] = play.split(' ');
+      return {
+        cards,
+        bet: parseInt(bet),
+      };
     });
-  }
 
-  return raceResultList;
+  return data;
 }
 
-// SOLVE
-function getWaysToWin(timeLimit: number, recordDistance: number) {
-  let counter = 0;
+const CardRank: Record<string, number> = {
+  2: 0,
+  3: 1,
+  4: 2,
+  5: 3,
+  6: 4,
+  7: 5,
+  8: 6,
+  9: 7,
+  T: 8,
+  J: 9,
+  Q: 10,
+  K: 11,
+  A: 12,
+};
 
-  for (let i = 1; i < timeLimit; i++) {
-    const chargedSpeed = i;
-    const timeRemaining = timeLimit - i;
-
-    const distance = chargedSpeed * timeRemaining;
-
-    if (distance > recordDistance) counter++;
-  }
-
-  return counter;
+function createCardMap() {
+  return new Map<string, number>([
+    ['2', 0],
+    ['3', 0],
+    ['4', 0],
+    ['5', 0],
+    ['6', 0],
+    ['7', 0],
+    ['8', 0],
+    ['9', 0],
+    ['T', 0],
+    ['J', 0],
+    ['Q', 0],
+    ['K', 0],
+    ['A', 0],
+  ]);
 }
 
-function main(inputFile: string) {
-  const raceList = processInput(inputFile);
+function convertCardStringToPowerLevel(cards: string) {
+  let powerLevel = '';
 
-  const waysToWinList: number[] = [];
+  cards.split('').forEach((card) => {
+    const rank = CardRank[card] || 0;
 
-  for (const race of raceList) {
-    const waysToWin = getWaysToWin(race.time, race.distance);
-    waysToWinList.push(waysToWin);
-  }
+    powerLevel += rank.toString().padStart(2, '0');
+  });
 
-  const product = waysToWinList.reduce((acc, curr) => acc * curr, 1);
-  log(product);
+  return parseInt(powerLevel);
+  // return powerLevel;
 }
 
-main('./day-06/input.txt');
+// convertCardStringToPowerLevel('569TQ');
+
+function parseHand(cards: string) {
+  const cardMap = createCardMap();
+
+  for (const card of cards) {
+    const count = cardMap.get(card) || 0;
+    cardMap.set(card, count + 1);
+  }
+
+  const sortedCardList = [...cardMap.entries()].sort((a, b) => b[1] - a[1]);
+
+  const highestCard = sortedCardList[0];
+  const secondHighestCard = sortedCardList[1];
+
+  switch (highestCard[1]) {
+    case 5:
+      return 6;
+    case 4:
+      return 5;
+    case 3:
+      return secondHighestCard[1] === 2 ? 4 : 3;
+    case 2:
+      return secondHighestCard[1] === 2 ? 2 : 1;
+    default:
+      return 0;
+  }
+}
+
+function main(file: string) {
+  console.time('timer');
+  const data = processData(file);
+
+  const rankingList = data.map((hand) => {
+    return {
+      ...hand,
+      rank: parseHand(hand.cards),
+      powerLevel: convertCardStringToPowerLevel(hand.cards),
+    };
+  });
+
+  const sortedRankingList = [...rankingList].sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+
+    return a.powerLevel - b.powerLevel;
+    // return 0;
+  });
+
+  log(sortedRankingList);
+
+  const totalWin = sortedRankingList.reduce(
+    (acc, curr, idx) => acc + curr.bet * (idx + 1),
+    0
+  );
+
+  log(totalWin);
+
+  console.timeEnd('timer');
+}
+
+main('./day-07/input.txt');
